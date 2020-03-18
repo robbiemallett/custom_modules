@@ -162,7 +162,27 @@ def get_field(key,
                 
         lon = grid['lon']
         lat = grid['lat']
+
+    elif 'cds' in key.lower():
         
+        # User wants cds ice type data, available between March 2002 and Dec 2005
+        
+        if resolution == 432:
+            
+            data_dir = '/home/robbie/Dropbox/SM_Thickness/data/CDS_type/monmeans/432/'
+            
+        elif resolution == 361:
+            
+            data_dir = '/home/robbie/Dropbox/SM_Thickness/data/CDS_type/monmeans/361/'
+            
+        file_name = f'{year}_{month}_monthlymean.nc'
+
+        data = Dataset(data_dir+file_name)
+
+        lon = data['lon']
+        lat = data['lat']
+        field = data['ice_type']
+
         
         
     #return dictionary of field, lon, lat
