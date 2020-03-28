@@ -2,6 +2,7 @@ import numpy as np
 from netCDF4 import Dataset
 import pickle
 import mask
+import xarray as xr
 
 def get_field(key,
                  month,
@@ -26,7 +27,7 @@ def get_field(key,
         
             # User wants envisat field
 
-            data_dir = f'/media/robbie/Seagate Portable Drive/Envisat_thickness/{year}/'
+            data_dir = f'/home/robbie/Dropbox/SM_Thickness/data/Envisat_CCI/{year}/'
             file = f'ESACCI-SEAICE-L3C-SITHICK-RA2_ENVISAT-NH25KMEASE2-{year}{month}-fv2.0.nc'
             data = Dataset(data_dir+file)
         
@@ -49,7 +50,7 @@ def get_field(key,
             
             lon = data['lon']
             lat = data['lat']
-            field = data['radar_freeboard']
+            field = data['radar_freeboard'][0]
             
             
         elif 'thickness' in variable.lower():
@@ -66,6 +67,8 @@ def get_field(key,
             field = data[variable]
             
     elif 'landy' in key.lower():
+
+        # print('landy cs2')
         
         # User wants jack landy's CS2 data
         
@@ -74,45 +77,58 @@ def get_field(key,
         data = Dataset(data_dir+file)
         
         if 'rad' in variable.lower():
-            
+            # print('radar freeboard')
             # Get radar freeboard
             
-            lon = data['Longitude']
-            lat = data['Latitude']
-            field = data['Radar_Freeboard']
+            field = np.flipud(data['Radar_Freeboard'])
             
         elif 'thickness' in variable.lower():
             
             # Get total thickness
-            
-            lon = data['Longitude']
-            lat = data['Latitude']
-            field = data['Sea_Ice_Thickness']
+
+            field = np.flipud(data['Sea_Ice_Thickness'])
             
         else:
             
             # User wants some other variable. Give it to them!
-            
-            lon = data['Longitude']
-            lat = data['Latitude']
-            field = data[variable]
-            
+
+            field = np.flipud(data[variable])
+
+        lon = mask.get('lon')
+        lat = mask.get('lat')
+
+######################################################################
+
     elif key.lower() == 'w99':
         
         # User wants the W99 field
-        
-        W99_data = pickle.load(open(f"/home/robbie/Dropbox/SM_Thickness/code/W99/W99_{resolution}.p","rb"))
-        
-        
-        field = W99_data[variable][int(month)+1]
-        
         # Get the W99 grid
+
+        if resolution == 361:
+
+            data_dir = '/home/robbie/Dropbox/SM_Thickness/data/W99/'
+            
+            with xr.open_dataset(f'{data_dir}W99_361.nc') as data:
+
+                ds_month = data.where(int(month) == data.month, drop=True)
+
+                field = np.array(ds_month[variable])[0]
+
+            lon = mask.get('lon')
+            lat = mask.get('lat')
+
+        elif resolution == 760:
+
+            W99_data = pickle.load(open(f"/home/robbie/Dropbox/SM_Thickness/code/W99/W99_{resolution}.p","rb"))
         
-        grid = pickle.load(open(f'/home/robbie/custom_modules/{resolution}_grid.p','rb'))
-                
-        lon = grid['lon']
-        lat = grid['lat']
-        
+            field = W99_data[variable][int(month)]
+
+            grid = pickle.load(open(f'/home/robbie/custom_modules/{resolution}_grid.p','rb'))
+            lon = grid['lon']
+            lat = grid['lat']
+
+#######################################################################
+
     elif 'osisaf' in key.lower():
         
         # User wants the OSISAF ice type data
@@ -128,40 +144,54 @@ def get_field(key,
         else:
             field = data['ice_type']
 
+#######################################################################
+
     elif 'snowmodel' in key.lower():
         
         # User wants the SnowModel snow data
         
-        # Possible variables: depth, density
-        
-        folder = '/home/robbie/Dropbox/SM_Thickness/data/SnowModel/av_monthlies/'
-        
-        if 'depth' in variable.lower():
-            field = pickle.load(open(folder + month + str(year) + "snod.p",'rb'))
-        elif 'density' in variable.lower():
-            field = pickle.load(open(folder + month + str(year) + "sden.p",'rb'))
-        elif 'swe' in variable.lower():
-            density_field = pickle.load(open(folder + month + str(year) + "sden.p",'rb'))
-            depth_field = pickle.load(open(folder + month + str(year) + "snod.p",'rb'))
-            field = np.multiply(depth_field,density_field)
+        # Possible variables: depth, density, SWE
+ 
+        data_dir = '/home/robbie/Dropbox/SM_Thickness/data/SnowModel/monthly_means/'
+
+        with xr.open_dataset(f'{data_dir}{year}{str(month).zfill(2)}.nc') as data:
+
+            field = data[variable]
         
         lon = mask.get('lon')
         lat = mask.get('lat')
 
+#######################################################################
+
     elif key.lower() == 'mw99':
-        
-        # User wants mW99
-        
-        data = pickle.load(open(f"/home/robbie/Dropbox/SM_Thickness/data/W99/mW99_{resolution}/{month}{year}_mW99.p","rb"))
-        
-        field = data[variable]
-        
-        # Get the W99 grid
-        
-        grid = pickle.load(open(f'/home/robbie/custom_modules/{resolution}_grid.p','rb'))
-                
-        lon = grid['lon']
-        lat = grid['lat']
+
+        data_dir = '/home/robbie/Dropbox/SM_Thickness/data/W99/mW99_361/'
+
+        with xr.open_dataset(f'{data_dir}{year}_mW99.nc') as data:
+
+            ds_month = data.where(int(month) == data.month, drop=True)
+
+            field = np.array(ds_month[variable])[0]
+
+        lon = mask.get('lon')
+        lat = mask.get('lat')
+
+######################################################################
+
+    elif 'nesosim' in key.lower():
+
+        if resolution == 361:
+
+            data_dir = '/home/robbie/Dropbox/SM_Thickness/data/nesosim/361_monthlies/'
+
+            with xr.open_dataset(f'{data_dir}{year}{str(month).zfill(2)}.nc') as data:
+
+                field = data[variable]
+
+            lon = mask.get('lon')
+            lat = mask.get('lat')
+
+#######################################################################
 
     elif 'cds' in key.lower():
         
@@ -183,7 +213,21 @@ def get_field(key,
         lat = data['lat']
         field = data['ice_type']
 
+#######################################################################
+
+    elif 'icesat' in key.lower():
         
+        data_dir = '/home/robbie/Dropbox/SM_Thickness/data/ICESAT/361/'
+
+        f_name = f'{month}_{year}_ICESAT.nc'
+
+        data = Dataset(data_dir+f_name)
+
+        field = data['freeboard']
+
+        lon = data['lon']
+
+        lat = data['lat']
         
     #return dictionary of field, lon, lat
     

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
+from cartoplot import cartoplot
 import imageio
 from netCDF4 import Dataset
 import pickle
@@ -113,10 +113,8 @@ def plot(region_string):
     code = regions_dict[region_string]
 
     fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='npstere',boundinglat=50,lon_0=360,resolution='l')
-    m.drawcoastlines(linewidth=0.5)
 
-    m.pcolormesh(get('lon'), get('lat'), get('mask'), latlon=True,cmap='plasma',vmax=code+1,vmin=code-1)
+    cartoplot(get('lon'), get('lat'), get('mask'),color_scale=(code+1,code-1))
     
     print(code)
     

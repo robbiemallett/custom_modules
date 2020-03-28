@@ -15,7 +15,7 @@ def cartoplot(lon,
               save_dir=None,
               show=True,
               color_scale=(None,None),
-              color_scheme='Plasma'):
+              color_scheme='plasma'):
     
     """
     Plots a north polar plot using cartopy. \
@@ -34,16 +34,6 @@ def cartoplot(lon,
         ax.add_feature(cartopy.feature.LAND, edgecolor='black',zorder=1)
 
     ax.set_extent([-180, 180, 90, bounding_lat], ccrs.PlateCarree())
-
-
-    # extent = 2500000
-
-    # ax.set_extent((-extent,
-    #                extent,
-    #                -extent,
-    #                extent),
-    #               crs=ccrs.NorthPolarStereo())
-    
     
     if gridlines == True:
         ax.gridlines()
@@ -51,12 +41,9 @@ def cartoplot(lon,
     vmin, vmax = color_scale[0], color_scale[1]
 
     plt.pcolormesh(np.array(lon), np.array(lat), np.array(data), vmin = vmin, vmax = vmax,
-                 transform=ccrs.PlateCarree(),zorder=0)
+                 transform=ccrs.PlateCarree(),zorder=0,cmap=color_scheme)
     
     plt.colorbar()
-    
-
-        
     
     if save_dir != None:
         plt.savefig(save_dir)
