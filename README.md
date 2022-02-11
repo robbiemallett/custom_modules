@@ -22,7 +22,7 @@ Will get to cleaning up and documenting this soon hopefully, but it relies on ma
 
 ### ll_xy.py
 
-Converts lon/lat coordinates to xy coords with units of meters specified in the NSIDC ease grid (Lambert equal area). Super useful for calculating the distance between points. This code also uses the most recent version of pyproj which has the Transformer syntax, which lots of people haven't yet switched to (so may be a useful template). 
+Converts lon/lat coordinates to xy coords with units of meters specified in the NSIDC ease grid (Lambert equal area). Super useful for calculating the distance between points. This code also uses the most recent version of pyproj which has the Transformer syntax, which lots of people haven't yet switched to (so may be a useful template). Also has the "inverse" keyword which goes the other way, xy to lon/lat.
 
 ### regrid.py
 
