@@ -1,12 +1,10 @@
 # custom_modules
 
-Useful bits of code that I want access to from all projects
-
-Plotting, regridding, transforming, region masking
+Useful bits of code that I want access to from all projects.
 
 ### Cartoplot.py
 
-I use cartoplot for rapidly visualising arrayed data for the Arctic. It goes like this:
+I use cartoplot for rapidly visualising arrayed data for the Arctic. It uses cartopy v0.19 and goes like this:
 ```
 from cartoplot import cartoplot
 
