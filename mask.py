@@ -37,7 +37,7 @@ def get(string):
         lat = np.array(grid_data.variables["lat"])
         return(lat)
     elif string == 'mask':
-        im = imageio.imread('/home/robbie/Dropbox/Data/J_Mask.tif')
+        im = imageio.imread('J_Mask.tif')
         mask = np.flipud(np.array(im))
         return(mask)
 
