@@ -20,7 +20,7 @@ def lonlat_to_xy(coords_1, coords_2, hemisphere, inverse=False):
  
 
     EASE_Proj = {'n': 'EPSG:3408',
-                 's': 'EPGS:3409'}
+                 's': 'EPSG:3409'}
     
     WGS_Proj = 'EPSG:4326'
     
