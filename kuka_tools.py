@@ -3,6 +3,8 @@ from netCDF4 import Dataset
 import matplotlib.pyplot as plt
 from pyproj import Proj, Transformer
 import numpy as np
+import math
+import pandas as pd
 import datetime
 
 def lonlat_to_xy(coords_1, coords_2, hemisphere, inverse=False):
@@ -50,6 +52,95 @@ def lonlat_to_xy(coords_1, coords_2, hemisphere, inverse=False):
         
         return (lon, lat)
         
+def get_nrcs(d,freq,minrange=1.3,maxrange=2):
+    samples = np.array([d['vv_power_decon0'],
+                        d['hv_power_decon0'],
+                        d['vh_power_decon0'],
+                        d['hh_power_decon0']])
+    
+    vars = get_vars(d,freq)
+    
+    tiled_range = np.tile(d['range'],(samples.shape[-1],1)).T
+    gate0,gate1=get_range_index(minrange,np.array(d['range'])),get_range_index(maxrange,np.array(d['range']))
+    
+    range_centroid_vv = sum(tiled_range[gate0:gate1]*samples[0][gate0:gate1])/sum(samples[0][gate0:gate1])
+    range_centroid_hh = sum(tiled_range[gate0:gate1]*samples[-1][gate0:gate1])/sum(samples[0][gate0:gate1])
+    
+    range_centroid_signal=(range_centroid_vv+range_centroid_hh)/2
+    
+    scale_factor=8*np.log(2)*range_centroid_signal**2*vars['corner_sigma']*math.cos(0)/(math.pi*vars['corner_range_file']**4*vars['antenna_beamwidth_rad']**2)/vars['corr_cal']
+    
+    total_power = np.array([np.nansum(samples[j,gate0:gate1],axis=0) for j in np.arange(4)])
+    pratio = np.array([total_power[j]/vars['cr_power'][j] for j in np.arange(4)])
+    nrcs=scale_factor*pratio
+    nrcs_dict={'vv':nrcs[0],'hv':nrcs[1],'vh':nrcs[2],'hh':nrcs[3]}
+    return nrcs_dict
+    
+def make_nrcs_file(f,directory,target_directory,hemisphere,minrange=1.3,maxrange=2):
+    d = Dataset(f'{directory}/{f}')
+    
+    if 'ka-scat' in f.lower():
+        freq = 'ka'
+    elif 'ku-scat' in f.lower():
+        freq = 'ku'
+    else:raise
+    
+    data = get_nrcs(d,freq,minrange=minrange,maxrange=maxrange)
+    
+    data_dict = {pol:np.array(data[pol]) for pol in ['vv','hh','hv','vh']}
+    
+    lon = np.array(d['lon'])
+    lat = np.array(d['lat'])
+    
+    data_dict['lon'],data_dict['lat']=lon,lat
+    
+    data_dict['x'],data_dict['y'] = lonlat_to_xy(lon,lat,hemisphere=hemisphere)
+    
+    data_dict['cross_tilt']=np.array(d['cross_tilt'])
+    data_dict['along_tilt']=np.array(d['along_tilt'])
+    data_dict['time']=np.array(d['start_time'])
+    
+    df = pd.DataFrame(data_dict)
+    
+    df.to_csv(f'{target_directory}/{f[:-3]}.csv')
+
+def get_vars(d,freq):
+    
+    if freq.lower()=='ku':
+        corner_sigma=16.77
+        antenna_beamwidth=16.9
+    elif freq.lower()=='ka':
+        corner_sigma=91.35
+        antenna_beamwidth=11.9
+    else:
+        raise
+        
+    antenna_beamwidth_rad = math.radians(antenna_beamwidth)
+    
+    calvars=d['calvars']
+    
+    total_corner_power_vv_file = 10**(calvars.corner_reflector_vv_power_dbm/10.)
+    total_corner_power_hh_file= 10**(calvars.corner_reflector_hh_power_dbm/10.)
+    reference_calibration_loop_power_file = 10**(calvars.cal_peak_dbm/10.) 
+    corner_range_file = calvars.corner_reflector_range_m
+    
+    cr_power = [total_corner_power_vv_file, 
+           (total_corner_power_vv_file+total_corner_power_hh_file)/2,
+           (total_corner_power_vv_file+total_corner_power_hh_file)/2,
+           total_corner_power_hh_file]
+    
+    reference_calibration_loop_power_file = 10**(d.groups['calvars'].cal_peak_dbm/10.) 
+    current_calibration_loop_power = d.current_calibration_loop_power
+    corr_cal = current_calibration_loop_power/reference_calibration_loop_power_file
+
+    vars = {'cr_power':cr_power,
+            'corner_sigma':corner_sigma,
+            'corner_range_file':corner_range_file,
+            'antenna_beamwidth_rad':antenna_beamwidth_rad,
+            'corr_cal':corr_cal}
+    
+    return vars
+    
 def get_time_ticks(times):
     seconds = [t.second for t in times]
     hours = [t.hour for t in times]
@@ -86,10 +177,12 @@ def plot_file(f,band,directory,time_offset_s=0,vlines=[]):
     plt.yticks(np.arange(0,hh.shape[0],skipper),labels=ranges[::skipper])
 
     plt.ylim(ylims[0],ylims[1])
-
+    time_inds=[]
     for time in vlines:
         time_ind = get_time_index(time,times)
         plt.axvline(time_ind,color='k',ls='--')
+        time_inds.append(time_ind)
+    return time_inds
 
 def get_ymd_from_filename(filename):
     
