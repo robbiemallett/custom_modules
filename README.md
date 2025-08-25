@@ -24,4 +24,6 @@ Converts lon/lat coordinates to xy coords with units of meters specified in the 
 
 ### regrid.py
 
-I use this all the time, it just regrids data. Eg. polar stereographic to EASE. It takes the lon/lat coordinates of your original data (plus the data itself), and the target lon/lats, and converts. To do this it converts all the points to xy, because otherwise the warped space of lon/lat coordinates fucks things up. Just a wrapper for scipy.griddata really, but handles the lon/lat issue conveniently. 
+I use this all the time, it just regrids data. Eg. polar stereographic to EASE. It takes the lon/lat coordinates of your original data (plus the data itself), and the target lon/lats, and converts. To do this it converts all the points to xy, because otherwise the warped space of lon/lat coordinates screws things up. Just a wrapper for scipy.griddata really, but handles the lon/lat issue conveniently. 
+
+This code also contains _regrid_fast_ which regrids large 3D arrays by just constructing the triangular mesh once and using the same mapping over and over. I used this for my 2021 Comms E&E paper a lot.
